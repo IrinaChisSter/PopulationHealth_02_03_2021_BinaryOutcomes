@@ -8,6 +8,7 @@
 3. Choose: Version Control > Git  
 4. Paste the following address into the "Repository URL" field:  
 
+https://github.com/IrinaChisSter/PopulationHealth_02_03_2021_BinaryOutcomes
 
 5. Press tab key (_"Project directory name"_ field will be filled automatically)  
 6. Choose a suitable folder in the "Create project as subdirectory of..." field  
