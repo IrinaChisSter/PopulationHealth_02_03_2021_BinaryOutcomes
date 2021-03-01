@@ -1,0 +1,522 @@
+---
+title: "LOGISTIC REGRESSION AND APPLICATIONS"  
+author: "Dr Irina Chis Ster"
+date: "21/01/2021"
+output:
+  html_notebook:  
+    df_print: paged
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+## OUTLINE OF THE LECTURE
+
+-   Continuous response/dependent variables - linear and multiple
+    regression techniques
+
+-   Binary response/dependent variable (e.g. presence/absence of
+    disease)
+
+-   Logistic regression - broadly similar set of techniques tailored to
+    a different type of outcome (binary)
+
+    -   it is also part of an array of so called generalized linear
+        models given their resemblance with continuous case
+
+-   The tale of a 2 by 2 table - scenarios and interpretations
+
+-   Logistic regression used as a binary classifier - simple
+    classification models
+
+-   Sensitivity and specificity of a diagnosis test
+
+-   Receiver operating characteristic curve (ROC) -the diagnostic
+    ability of a binary classifier system as its discrimination
+    threshold is varied
+
+## LOGISTIC REGRESSION FRAMEWORK
+
+-   Aims:
+
+    -   to model the risk of a disease in a population, i.e. to
+        investigate associations between the disease and the potential
+        risk factors including exposures
+
+    -   to understand patterns/heterogeneities associated with the
+        occurrence of disease
+
+-   Questions: what are the determinants or risk factors of a disease?
+
+    -   Demographics?
+
+    -   Environmental?
+
+    -   Social?
+
+-   Data needed:
+
+    -   The outcome is a binary or dichotomous variable such as: yes/no,
+        positive/ negative, presence/absence of disease.
+
+    -   A series of potential explanatory variables which are
+        hypothesized to be associated with the outcome
+
+-   Assumptions:
+
+    -   The outcome is assumed to be drawn from a binomial distribution
+        with a parameter to be estimated from the data
+
+    -   The observations are independent
+
+    -   In case of a binary/categorical potential explanatory variable
+
+        -   a case of a contingency table (such as two by two)
+
+    -   In case of a continuous potential explanatory variable, the
+        assumption is that there is a linear relationship between the
+        [***logit of the outcome***]{.ul} and that potential predictor
+        variable (rather than with the outcome directly) .
+
+-   The logit function is $logit(\pi) = log(\frac{\pi}{1-\pi})$, where
+    $\pi$ is the probabilities of the outcome
+
+-   Under special and well organized epidemiological circumstances
+    (design and the sample representation of the target population)
+    $\pi$ is usually referred to as [***the risk***]{.ul} of the outcome
+    (such as death) or the [***prevalence of the disease in that
+    population***]{.ul} (if disease is the outcome)
+
+-   Potential patterns of the outcome, i.e. its associations with groups
+    in the population are understood by the odds ratios (ORs)
+
+### REAL DATA EXAMPLE 1
+
+-   These data are from the Mayo Clinic trial investigating primary
+    biliary cirrhosis (PBC) of the liver conducted between 1974
+    and 1984. A total of 424 PBC patients, referred to Mayo Clinic
+    during that ten-year interval, met eligibility criteria for the
+    randomized placebo controlled trial of the drug D-penicillamine. The
+    first 312 cases in the data set participated in the randomized trial
+    and contain largely complete data. The additional 112 cases did not
+    participate in the clinical trial, but consented to have basic
+    measurements recorded and to be followed for survival. Six of those
+    cases were lost to follow-up shortly after diagnosis, so the data
+    here are on an additional 106 cases as well as the 312 randomized
+    participants. Details on the data are enclosed in the word document.
+    The outcome is death/surviving and its association with the drug
+    trial for those included in the trial but we will treat these data
+    as an observational study and investigate the risk of death in PBC
+    population in association with the available data.
+
+### LOGISTIC REGRESSION ON A CATEGORICAL VARIABLE
+
+-   A binary outcome and a binary/categorical potential association
+-   Question is death more likely in men or women in this population?
+-   Any familiarity?
+
+```{r}
+##reading the data in
+mydata <-read.table("PBC_data_text_tab_sep.txt", header=T, sep="\t")
+names(mydata)
+dim(mydata)
+summary(mydata)
+```
+
+### A TWO BY TWO TABLE?
+
+-   What about trying it ?
+
+```{r}
+table(mydata$sex) ##0=male, 1=female
+table(mydata$status_bin) ## 0/1= alive/dead
+
+mydata$sex<- mydata$sex+1
+as.factor(mydata$sex)
+mytable<-table(mydata$status_bin, mydata$sex)
+mytable
+
+margin.table(mytable, 1) # A frequencies (summed over B)
+margin.table(mytable, 2) # B frequencies (summed over A)
+prop.table(mytable) # cell percentages
+prop.table(mytable, 1) # row percentages
+prop.table(mytable, 2) # column percentages
+
+
+epitable <- data.frame(Survived=c(17, 215),Died=c(27, 159))
+rownames(epitable) <- c("Males","Female")
+epitable
+table2x2(epitable)
+```
+
+-   Main result to consider: The estimated odds ratio of death for women
+    against men is 0.466 (CI95%: [0.245;0.884]). This means that women
+    are almost twice less likely to die comparing to men in this cohort.
+
+-   What about investigating this using a logistic regression?
+
+```{r}
+gender<-factor(mydata$sex)
+
+logit_on_gender <- glm(mydata$status_bin~ gender, family = "binomial")
+
+summary(logit_on_gender) 
+exp(coef(logit_on_gender))
+exp(cbind(OR = coef(logit_on_gender), confint(logit_on_gender)))
+
+
+logit_all <- glm(mydata$status_bin~ 1, family = "binomial")
+summary(logit_all) 
+exp(coef(logit_all))
+exp(cbind(OR = coef(logit_all), confint(logit_all)))
+
+```
+
+-   Main result to consider: The estimated odds ratio is 0.47
+    (CI95%:[0.24;0.88])
+
+-   If the 4 cells in the two by two table are filled with numbers of
+    reasonable magnitude (\>=5), the two pieces of software should
+    produce similar results.
+
+-   The interpretation is then given in the study context.
+
+-   For example, we would be tempted to say that death is lees likely in
+    women than in men - but would that be the case? Remember the study
+    design
+
+### LOGISTIC REGRESSION ON A CONTINUOUS VARIABLE
+
+-   We have dealt with a continuous and a categorical variable when the
+    continuous variable was the dependent/response
+-   What about the situation in which the binary (group variable)
+    outcome is
+
+```{r}
+##fit the regression on age
+mydata$age_years<-mydata$age/365.5
+ 
+logit_on_age <- glm(status_bin ~age_years  , data = mydata, family = "binomial")
+summary(logit_on_age)
+
+##Hosmer-Lemeshow 
+logitgof(mydata$status_bin, fitted(logit_on_age)  )
+
+exp(coef(logit_on_age))
+exp(cbind(OR = coef(logit_on_age), confint(logit_on_age)))
+
+```
+
+Interpretation:
+
+-   The evidence suggests that OR of death increases with age in this
+    PBC cohort (p=0.00746). One year increase in age increases the OR of
+    death by a factor of 1.026(95%(1.007-1.045)). Or, one year increase
+    in age increases the OR of death by 2.6%(0.7%-4.5%).
+
+-   The Hosmer-Lemeshow test (p-value=0.27) for the goodness of fit is
+    consistent with a good fit of the model to the data (a p-value less
+    than 0.05 indicate a poor fit). The null hypothesis of the test
+    states that the model is a good fit to the data.
+
+### WHAT ABOUT ON BOTH GENDER AND AGE?
+
+Multivariable (multiple) logistic regression.
+
+```{r}
+##fit the regression
+mydata$sex_f<-as.factor(mydata$sex)
+is.factor(mydata$sex_f)
+
+logit_on_gender_age <- glm(status_bin ~age_years +sex_f, data = mydata, family = "binomial")
+summary(logit_on_gender_age)
+
+##Hosmer-Lemeshow 
+logitgof(mydata$status_bin, fitted(logit_on_gender_age)  )
+
+exp(coef(logit_on_gender_age))
+exp(cbind(OR = coef(logit_on_gender_age), confint(logit_on_gender_age)))
+
+```
+
+Interpretation:
+
+-   The evidence suggests that, when controlling/adjusting for gender,
+    the OR of death increases with age in this PBC cohort (p=0.00746).
+    One year increase in age increases the adjusted (for gender) OR of
+    death by a factor of 1.023(95%(1.004-1.043)). Or, one year increase
+    in age increases the adjusted OR of death by 2.3%(0.4%-4.3%).
+
+-   The estimated odds ratio of death for women against men is 0.523
+    (CI95%: [0.268;0.995]). This means that women are almost twice less
+    likely to die comparing to men in this cohort.
+
+-   The Hosmer-Lemeshow test (p-value=0.07) for the goodness of fit is
+    consistent with a good fit of the model to the data (a p-value less
+    than 0.05 indicate a poor fit). The null hypothesis of the test
+    states that the model is a good fit to the data.
+
+## PREDICTIONS
+
+```{r}
+
+newdata1 <- with(mydata, data.frame( age_years = mean(age_years), sex_f = factor(1:2)))
+newdata1
+
+
+newdata1$sexP <- predict(logit_on_gender_age, newdata = newdata1, type = "response")
+newdata1
+
+newdata2 <- with(mydata, data.frame(age_years = rep(seq(from = 20 , to = 80 , length.out = 100), 2),  sex_f = factor(rep(1:2, each = 100))))
+
+newdata3 <- cbind(newdata2, predict(logit_on_gender_age, newdata = newdata2, type = "link", se = TRUE))
+
+newdata3 <- within(newdata3, {
+    PredictedProb <- plogis(fit)
+    LL <- plogis(fit - (1.96 * se.fit))
+    UL <- plogis(fit + (1.96 * se.fit))
+})
+
+head(newdata3)
+
+ggplot(newdata3, aes(x = age_years, y = PredictedProb)) + geom_ribbon(aes(ymin = LL, ymax = UL, fill =sex_f), alpha = 0.2) + geom_line(aes(colour =sex_f),size = 1)
+ 
+```
+
+```{r}
+##the only modified bit
+logit_on_gender_age <- glm(status_bin ~age_years *sex_f, data = mydata, family = "binomial")
+summary(logit_on_gender_age)
+
+##Hosmer-Lemeshow 
+logitgof(mydata$status_bin, fitted(logit_on_gender_age)  )
+
+exp(coef(logit_on_gender_age))
+exp(cbind(OR = coef(logit_on_gender_age), confint(logit_on_gender_age)))
+
+
+
+newdata1 <- with(mydata, data.frame( age_years = mean(age_years), sex_f = factor(1:2)))
+newdata1
+
+
+newdata1$sexP <- predict(logit_on_gender_age, newdata = newdata1, type = "response")
+newdata1
+
+newdata2 <- with(mydata, data.frame(age_years = rep(seq(from = 20 , to = 80 , length.out = 100), 2),  sex_f = factor(rep(1:2, each = 100))))
+
+newdata3 <- cbind(newdata2, predict(logit_on_gender_age, newdata = newdata2, type = "link", se = TRUE))
+
+newdata3 <- within(newdata3, {
+    PredictedProb <- plogis(fit)
+    LL <- plogis(fit - (1.96 * se.fit))
+    UL <- plogis(fit + (1.96 * se.fit))
+})
+
+head(newdata3)
+
+ggplot(newdata3, aes(x = age_years, y = PredictedProb)) + geom_ribbon(aes(ymin = LL, ymax = UL, fill =sex_f), alpha = 0.2) + geom_line(aes(colour =sex_f),size = 1)
+
+```
+
+```{r}
+#the only modified bit
+table(mydata$drug)
+mydata$drug_f<-factor(mydata$drug)
+
+logit_on_gender_drug <- glm(status_bin ~ drug_f+sex_f, data = mydata, family = "binomial")
+summary(logit_on_gender_drug)
+
+
+exp(coef(logit_on_gender_drug))
+exp(cbind(OR = coef(logit_on_gender_drug), confint(logit_on_gender_drug)))
+
+
+
+newdata1 <- with(mydata, data.frame(drug_f = factor(1:2) , sex_f = factor(rep(1:2, each = 2))))
+newdata1
+
+
+newdata1$drug_genderP <- predict(logit_on_gender_drug, newdata = newdata1, type = "response")
+newdata1
+
+newdata2 <- with(mydata, data.frame(drug_f = factor(1:2) , sex_f = factor(rep(1:2, each = 2))))
+
+newdata3 <- cbind(newdata2, predict(logit_on_gender_drug, newdata = newdata2, type = "link", se = TRUE))
+
+newdata3 <- within(newdata3, {
+    PredictedProb <- plogis(fit)
+    LL <- plogis(fit - (1.96 * se.fit))
+    UL <- plogis(fit + (1.96 * se.fit))
+})
+
+head(newdata3)
+
+```
+
+```{r}
+#the only modified bit
+
+##drug 2=placebo, 1=intervention
+table(mydata$drug)
+mydata$drug_f<-factor(mydata$drug)
+
+logit_on_gender_drug_inter <- glm(status_bin ~ drug_f*sex_f, data = mydata, family = "binomial")
+summary(logit_on_gender_drug_inter)
+
+
+exp(coef(logit_on_gender_drug_inter))
+exp(cbind(OR = coef(logit_on_gender_drug_inter), confint(logit_on_gender_drug_inter)))
+
+
+
+newdata1 <- with(mydata, data.frame(drug_f = factor(1:2) , sex_f = factor(rep(1:2, each = 2))))
+newdata1
+
+
+newdata1$drug_genderP <- predict(logit_on_gender_drug_inter, newdata = newdata1, type = "response")
+newdata1
+
+newdata2 <- with(mydata, data.frame(drug_f = factor(1:2) , sex_f = factor(rep(1:2, each = 2))))
+
+newdata3 <- cbind(newdata2, predict(logit_on_gender_drug_inter, newdata = newdata2, type = "link", se = TRUE))
+
+newdata3 <- within(newdata3, {
+    PredictedProb <- plogis(fit)
+    LL <- plogis(fit - (1.96 * se.fit))
+    UL <- plogis(fit + (1.96 * se.fit))
+})
+
+head(newdata3)
+
+```
+
+## MODEL CHOICE and COMPARISON
+
+```{r}
+AIC(logit_on_gender_drug, logit_on_gender_drug_inter)
+```
+
+## Area under the ROC curve -- assessing discrimination in logistic regression
+
+```{r}
+set.seed(63126)
+n <- 1000
+x <- rnorm(n)
+pr <- exp(x)/(1+exp(x))
+y <- 1*(runif(n) < pr)
+mod <- glm(y~x, family="binomial")
+predpr <- predict(mod,type=c("response"))
+roccurve <- roc(y ~ predpr)
+plot(roccurve)
+```
+
+```{r}
+set.seed(63126)
+n <- 1000
+x <- rnorm(n)
+pr <- exp(5*x)/(1+exp(5*x))
+y <- 1*(runif(n) < pr)
+mod <- glm(y~x, family="binomial")
+predpr <- predict(mod,type=c("response"))
+roccurve <- roc(y ~ predpr)
+plot(roccurve)
+```
+
+1.Comparing Two Independent Proportions
+
+```{r}
+
+epitable <- data.frame(Boys=c(873, 389),Girls=c(730,372))
+rownames(epitable) <- c("No","Yes")
+epitable
+table2x2(epitable)
+```
+
+INTERPRETATION:
+
+## Comparing Two Paired (Matched) Proportions
+
+```{r}
+epitable <- data.frame(Vomiting_no=c(532, 73),Vomiting_yes=c(13, 53))
+rownames(epitable) <- c("Nausea_no","Nausea_yes")
+epitable
+table2x2(epitable)
+```
+
+```{r}
+epitable <- data.frame(After_less500m=c(56, 20),After_more500m=c(37, 43))
+rownames(epitable) <- c("Before_less500m","Before_more500m")
+epitable
+table2x2(epitable)
+
+```
+
+## Measuring the Diagnostic Value of a Clinical Test
+
+```{r}
+epitable <- data.frame(DiabetesNo=c(461, 49),DiabetesYes=c(14, 56))
+rownames(epitable) <- c("TestNegative","TestPositive")
+epitable
+table2x2(epitable)
+
+kappa(data=epitable)
+```
+
+## Measuring the Association between an exposure and a Disease
+
+```{r}
+epitable <- data.frame(Cataract_yes=c(55, 552),Cataract_no=c(84, 927))
+rownames(epitable) <- c("Diabetes_yes","Diabetes_no")
+epitable
+table2x2(epitable)
+
+```
+
+## Assessment of Binary Classifier with Visualization
+
+```{r}
+mydata_diabetes <-read.table("DiabetesData.txt", header=T, sep="\t")
+names(mydata)
+dim(mydata)
+summary(mydata)
+
+```
+
+```{r}
+
+logistic.model <- glm(as.factor(dtest)~chol+age+bmi, data = mydata_diabetes ,family = "binomial")
+class <- logistic.model$y
+score <- logistic.model$fitted.values
+
+measure <- measureit(score = score, class = class, measure = c("ACC", "SENS", "FSCR"))
+names(measure)
+
+plot(measure$ACC~measure$Cutoff, type = "l")
+plot(measure$ACC~measure$Cutoff, type = "l")
+
+```
+
+```{r}
+logistic.model <- glm(as.factor(dtest)~ chol+age+bmi, data =mydata_diabetes, family = "binomial")
+
+## make the score and class
+class <- logistic.model$y
+# score = log odds
+score <- qlogis(logistic.model$fitted.values)
+
+## rocit object
+rocit_emp <- rocit(score = score, class = class, method = "emp")
+rocit_bin <- rocit(score = score, class = class, method = "bin")
+rocit_non <- rocit(score = score, class = class, method = "non")
+
+summary(rocit_emp)
+summary(rocit_bin)
+summary(rocit_non)
+
+
+plot(rocit_emp, col = c(1,"gray50"), legend = FALSE, YIndex = FALSE)
+lines(rocit_bin$TPR~rocit_bin$FPR, col = 2, lwd = 2)
+lines(rocit_non$TPR~rocit_non$FPR, col = 4, lwd = 2)
+legend("bottomright", col = c(1,2,4), c("Empirical ROC", "Binormal ROC", "Non-parametric ROC"), lwd = 2)
+```
