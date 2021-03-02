@@ -778,7 +778,8 @@ lines(rocit_non$TPR~rocit_non$FPR, col = 4, lwd = 2)
 legend("bottomright", col = c(1,2,4), c("Empirical ROC", "Binormal ROC", "Non-parametric ROC"), lwd = 2)
 ```
 
-###  Simulating a poor discrimination
+### Simulating a poor discrimination
+
 ```{r}
 set.seed(34535)
 n <- 1000
@@ -791,7 +792,8 @@ roccurve <- roc(y ~ predpr)
 plot(roccurve)
 ```
 
-###  Simulating a good discrimination
+### Simulating a good discrimination
+
 ```{r}
 set.seed(34535)
 n <- 1000
