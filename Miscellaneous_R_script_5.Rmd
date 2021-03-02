@@ -84,6 +84,8 @@ Otherwise, packages will be installed/loaded on your local computer.
   library(rhoR)
   library(bdpv)
   library(ROCit)
+  library(lmtest)
+  library(epiR)
 ```
 
 ### Current script file
