@@ -664,8 +664,8 @@ table2x2(epitable)
 ```
 
 Given the case-control design - only the OR can be derived and
-interpreted. That is we cannot derive the absolute risk/odds of the
-disease in exposed or non-exposed group
+interpreted. That means that we cannot derive the absolute risk/odds of
+the disease in exposed or non-exposed group
 
 ### Measuring the Diagnostic Value of a Clinical Test
 
@@ -675,13 +675,8 @@ disease in exposed or non-exposed group
     specificity and sensitivity and positive (negative) predictive
     value. In this context, the row variable *X* is the clinical test
     (*T*) to be assessed (negative, positive) and the column variable
-    *Y* the disease (*D*) to be diagnosed (absent, present). As an
-    example, consider the Folin-Wu colorimetric test to assay blood
-    glucose. Remein and Wilkerson applied this test to 510 presumably
-    healthy subjects and to 70 diabetic patients. Data are given in
-    Table below. In this table, column margins were fixed and all other
-    numbers were observed. Thus, percentages can only be derived
-    vertically.
+    *Y* the disease (*D*) to be diagnosed (absent, present). The generic
+    table associated with this situation is below.
 
     ![](DiagnosticTests.png)
 
@@ -715,6 +710,13 @@ disease in exposed or non-exposed group
 
 -   Many pieces of software, including R, disregard disease prevalence
 
+-   As an example, consider the Folin-Wu colorimetric test to assay
+    blood glucose. Remein and Wilkerson applied this test to 510
+    presumably healthy subjects and to 70 diabetic patients. Data are
+    given in Table below. In this table, column margins were fixed and
+    all other numbers were observed. Thus, percentages can only be
+    derived vertically.
+
 ```{r}
 epitable <- data.frame(DiabetesNo=c(461, 49),DiabetesYes=c(14, 56))
 rownames(epitable) <- c("TestNegative","TestPositive")
@@ -727,13 +729,48 @@ epi.tests(dat, conf.level = 0.95)
  
 ```
 
+-   Sensitivity is the proportion of true positives that are correctly
+    identified by the test.
+
+-   Specificity is the proportion of true negatives that are correctly
+    identified by the test.
+
+-   We can thus say that, based on the sample studied, we would expect
+    97% of patients with diabetes to have a positive Folin-Wu
+    colorimetric test, while 53% of those with no diabetes would have
+    negative Folin-Wu colorimetric test.
+
+-   Positive predictive value is the proportion of patients with
+    positive test results who are correctly diagnosed.
+
+-   Negative predictive value is the proportion of patients with
+    negative test results who are correctly diagnosed.
+
+-   The predictive values of a test in clinical practice depend
+    critically on the prevalence of the abnormality in the patients
+    being tested; this may well differ from the prevalence in a
+    published study assessing the usefulness of the test.
+
+-   **If the prevalence of the disease is very low, the positive
+    predictive value will not be close to 1 even if both the sensitivity
+    and specificity are high. Thus in screening the general population
+    it is inevitable that many people with positive test results will be
+    false positives.** When a disease is highly prevalent, the test is
+    better at 'ruling in' the disease and worse at 'ruling it out.'
+
+-   The **positive likelihood ratio** = **sensitivity/ (1 -
+    specificity)**. It indicates the value of the test for increasing
+    certainty about a positive diagnosis.
+
+-   The **negative Likelihood Ratio=(1- Sensitivity)/Specificity**
+
 ### Assessment of Binary Classifier with Visualization
 
 ```{r}
 mydata_diabetes <-read.table("DiabetesData.txt", header=T, sep="\t")
-names(mydata)
-dim(mydata)
-summary(mydata)
+names(mydata_diabetes)
+dim(mydata_diabetes)
+summary(mydata_diabetes)
 
 ```
 
@@ -742,6 +779,10 @@ summary(mydata)
 logistic.model <- glm(as.factor(dtest)~chol+age+bmi, data = mydata_diabetes ,family = "binomial")
 class <- logistic.model$y
 score <- logistic.model$fitted.values
+
+observed_predicted<-cbind(logistic.model$y, logistic.model$fitted.values)
+observed_predicted
+
 
 measure <- measureit(score = score, class = class, measure = c("ACC", "SENS", "FSCR"))
 names(measure)
@@ -776,7 +817,26 @@ plot(rocit_emp, col = c(1,"gray50"), legend = FALSE, YIndex = FALSE)
 lines(rocit_bin$TPR~rocit_bin$FPR, col = 2, lwd = 2)
 lines(rocit_non$TPR~rocit_non$FPR, col = 4, lwd = 2)
 legend("bottomright", col = c(1,2,4), c("Empirical ROC", "Binormal ROC", "Non-parametric ROC"), lwd = 2)
+
+ciAUC(rocit_emp)
+ciAUC(rocit_bin)
+ciAUC(rocit_non)
 ```
+
+A global assessment of the performance of the test (sometimes called
+**diagnostic accuracy**) is given by the **area under the receiver
+operating characteristic curve**. This area is equal to the probability
+that a random person with the disease has a higher value of the
+measurement than a random person without the disease. (This latter
+probability is a half for an uninformative test - equivalent to tossing
+a coin.)
+
+No test will be clinically useful if it cannot discriminate, so a global
+assessment of discriminatory power is an important step.
+
+A receiver operating characteristic plot is particularly useful when
+comparing two or more measures. A test with a curve that lies wholly
+above the curve of another will be clearly better.
 
 ### Simulating a poor discrimination
 

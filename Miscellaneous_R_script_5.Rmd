@@ -86,6 +86,17 @@ Otherwise, packages will be installed/loaded on your local computer.
   library(ROCit)
   library(lmtest)
   library(epiR)
+  
+
+ library(nnet)
+ library(farver)
+library(brant)
+
+## library(lattice)
+## library(Hmisc)
+## library(reshape2)
+
+
 ```
 
 ### Current script file
